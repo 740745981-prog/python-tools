@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>周老板 · 便利店AI客服</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,sans-serif;background:#f5f0eb;display:flex;justify-content:center;align-items:center;min-height:100vh}
+.chat{width:400px;height:700px;background:#fff;border-radius:12px;box-shadow:0 2px 20px rgba(0,0,0,.12);display:flex;flex-direction:column;overflow:hidden}
+.header{background:#e0915a;color:#fff;padding:16px;text-align:center}
+.header h2{font-size:16px;font-weight:500}
+.header p{font-size:11px;opacity:.85;margin-top:4px}
+.messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.msg{padding:10px 14px;border-radius:12px;max-width:80%;font-size:13px;line-height:1.6;word-break:break-word}
+.msg.ai{background:#fdf1e8;color:#333;align-self:flex-start;border-bottom-left-radius:4px}
+.msg.user{background:#e0915a;color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.msg.system{background:#fff3e0;align-self:center;font-size:10px;border-radius:8px;max-width:90%;color:#999}
+.quick-btns{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px;border-top:1px solid #f0ebe2}
+.quick-btns button{background:#fdf1e8;border:1px solid #e0915a;color:#e0915a;padding:6px 12px;border-radius:16px;font-size:11px;cursor:pointer;white-space:nowrap}
+.quick-btns button:hover{background:#e0915a;color:#fff}
+.input-box{display:flex;padding:10px 12px;gap:8px;border-top:1px solid #eee}
+.input-box input{flex:1;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none}
+.input-box button{background:#e0915a;color:#fff;border:none;padding:10px 14px;border-radius:8px;cursor:pointer;font-size:13px}
+.input-box button:disabled{opacity:.5}
+</style>
+
+<div id="activation-gate" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;z-index:9999;display:flex;flex-direction:column;justify-content:center;align-items:center;font-family:sans-serif">
+  <h2 style="color:#333;margin-bottom:8px">🔐 激活AI客服</h2>
+  <p style="color:#999;font-size:13px;margin-bottom:20px">首次使用需激活，之后自动登录</p>
+  <input id="act-code" type="text" placeholder="输入激活码" style="padding:12px 20px;font-size:16px;border:2px solid #ddd;border-radius:8px;text-align:center;width:200px;outline:none" maxlength="8" autofocus>
+  <button onclick="checkActivation()" style="margin-top:12px;padding:12px 40px;background:#e0915a;color:#fff;border:none;border-radius:8px;font-size:15px;cursor:pointer">激活</button>
+  <p id="act-error" style="color:#e53e3e;font-size:12px;margin-top:10px;display:none"></p>
+  <p style="color:#ccc;font-size:11px;margin-top:30px">激活码: D175B69E</p>
+</div>
+<script>
+const AUTH_URL = 'https://raw.githubusercontent.com/740745981-prog/python-tools/main/activations.json';
+const MY_CODE = 'D175B69E';
+const STORAGE_KEY = 'ai_kefu_activated_' + MY_CODE;
+
+// 之前激活过 → 直接跳过
+(function(){
+  let saved = localStorage.getItem(STORAGE_KEY);
+  if (saved === 'true') {
+    document.getElementById('activation-gate').style.display = 'none';
+    return;
+  }
+  // 上次激活超过7天 → 重新验证
+  let ts = localStorage.getItem(STORAGE_KEY + '_ts');
+  if (saved === 'true' && ts) {
+    let days = (Date.now() - parseInt(ts)) / 86400000;
+    if (days < 7) {
+      document.getElementById('activation-gate').style.display = 'none';
+      return;
+    }
+  }
+})();
+
+async function checkActivation() {
+  let code = document.getElementById('act-code').value.trim().toUpperCase();
+  let errorEl = document.getElementById('act-error');
+
+  // 远程校验
+  try {
+    let resp = await fetch(AUTH_URL + '?t=' + Date.now());
+    let data = await resp.json();
+    let client = data.clients && data.clients[code];
+    if (client && client.active) {
+      activate(code);
+      return;
+    }
+    if (client && !client.active) {
+      errorEl.textContent = '已过期，请联系客服续费';
+      errorEl.style.display = 'block';
+      localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+  } catch(e) {}
+
+  // 本地兜底
+  if (code === MY_CODE) {
+    activate(code);
+    return;
+  }
+
+  errorEl.textContent = '激活码无效';
+  errorEl.style.display = 'block';
+}
+
+function activate(code) {
+  localStorage.setItem(STORAGE_KEY, 'true');
+  localStorage.setItem(STORAGE_KEY + '_ts', Date.now());
+  document.getElementById('activation-gate').style.display = 'none';
+}
+
+// 静默检查：每30分钟远程验证一次激活码是否仍有效
+setInterval(async function(){
+  if (document.getElementById('activation-gate').style.display === 'none') {
+    try {
+      let resp = await fetch(AUTH_URL + '?t=' + Date.now());
+      let data = await resp.json();
+      let client = data.clients && data.clients[MY_CODE];
+      if (client && !client.active) {
+        localStorage.removeItem(STORAGE_KEY);
+        document.getElementById('activation-gate').style.display = 'flex';
+        alert('激活码已过期，请联系客服');
+      }
+    } catch(e) {}
+  }
+}, 1800000);
+</script>
+</head>
+<body>
+
+<div class="chat">
+  <div class="header">
+    <h2>🤖 周老板的便利店 · AI客服</h2>
+    <p>周老板 · 便利店 · 激活码:D175B69E</p>
+  </div>
+
+  <div class="messages" id="messages">
+    <div class="msg ai">您好！我是周老板的AI客服。有问题随时问我。</div>
+  </div>
+
+  <div class="quick-btns">
+    <button onclick="quickAsk('商品保质期还有多久？')">商品保质期还有多久？</button>
+    <button onclick="quickAsk('这个商品有没有特价或促销活动？')">这个商品有没有特价或促销活动？</button>
+    <button onclick="quickAsk('你们店铺现在营业吗？')">你们店铺现在营业吗？</button>
+    <button onclick="quickAsk('我的外卖订单送到哪里了？')">我的外卖订单送到哪里了？</button>
+  </div>
+
+  <div class="input-box">
+    <input type="text" id="input" placeholder="输入问题..." onkeydown="if(event.key==='Enter')send()">
+    <button id="btn" onclick="send()">发送</button>
+  </div>
+</div>
+
+<script>
+const API_KEY = 'sk-c28527a094fb4f9f8d35a6b7268725af';
+const API_URL = 'https://api.deepseek.com/chat/completions';
+
+const SYSTEM_PROMPT = `您好，我是周老板的便利店AI助手！店里农夫山泉2元/瓶，可乐3元/瓶，营业7:00-23:00。满30元送货上门。如需其他商品或咨询，告诉我就好；不清楚的，我会让老板加您微信哦！`;
+
+let history = [{"role":"system","content":SYSTEM_PROMPT}];
+
+function addMsg(role, text){
+  let div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.textContent = text;
+  document.getElementById('messages').appendChild(div);
+  document.getElementById('messages').scrollTop = 99999;
+}
+
+async function quickAsk(text) {
+  document.getElementById('input').value = text;
+  await send();
+}
+
+async function send(){
+  let input = document.getElementById('input');
+  let btn = document.getElementById('btn');
+  let text = input.value.trim();
+  if(!text) return;
+
+  addMsg('user', text);
+  input.value = '';
+  btn.disabled = true;
+
+  history.push({"role":"user","content":text});
+
+  try{
+    let resp = await fetch(API_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
+      body:JSON.stringify({model:'deepseek-chat',messages:history,max_tokens:300})
+    });
+    let data = await resp.json();
+    let reply = data.choices[0].message.content;
+    addMsg('ai', reply);
+    history.push({"role":"assistant","content":reply});
+  }catch(e){
+    addMsg('system','网络错误。刷新页面重试。');
+  }
+  btn.disabled = false;
+}
+</script>
+
+</body>
+</html>
