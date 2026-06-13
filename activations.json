@@ -27,6 +27,12 @@
       "created": "2026-06-13 10:50",
       "active": false,
       "revoked": "2026-06-13 10:52"
+    },
+    "237D8816": {
+      "name": "孙老板",
+      "business": "理发店",
+      "created": "2026-06-13 10:58",
+      "active": true
     }
   }
 }
