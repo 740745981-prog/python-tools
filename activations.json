@@ -1,0 +1,25 @@
+{
+  "clients": {
+    "1A51D0E7": {
+      "name": "张老板",
+      "business": "火锅店",
+      "created": "2026-06-13 10:38",
+      "active": false,
+      "revoked": "2026-06-13 10:38"
+    },
+    "C89B3849": {
+      "name": "测试",
+      "business": "火锅店",
+      "created": "2026-06-13 10:44",
+      "active": false,
+      "revoked": "2026-06-13 10:44"
+    },
+    "6ED281C6": {
+      "name": "李老板",
+      "business": "烧烤店",
+      "created": "2026-06-13 10:47",
+      "active": false,
+      "revoked": "2026-06-13 10:47"
+    }
+  }
+}
