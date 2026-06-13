@@ -25,7 +25,8 @@
       "name": "赵老板",
       "business": "奶茶店",
       "created": "2026-06-13 10:50",
-      "active": true
+      "active": false,
+      "revoked": "2026-06-13 10:52"
     }
   }
 }
